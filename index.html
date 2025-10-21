@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sopa de Letras</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Sopa de Letras</h1>
+        </header>
+        
+        <div id="user-section" class="section">
+            <h2>Ingresa tu usuario</h2>
+            <input type="text" id="username" placeholder="Tu nombre">
+            <button id="start-btn">Comenzar</button>
+        </div>
+        
+        <div id="game-section" class="section hidden">
+            <h2>Bienvenido, <span id="user-display"></span>!</h2>
+            <p>Encuentra las siguientes palabras:</p>
+            <div id="word-list"></div>
+            <div id="word-search"></div>
+            <button id="hint-btn">Pista</button>
+        </div>
+        
+        <div id="congratulations" class="section hidden">
+            <h2>¡Felicidades!</h2>
+            <p>Has completado la sopa de letras, <span id="winner-name"></span>!</p>
+            <button id="restart-btn">Jugar de nuevo</button>
+        </div>
+    </div>
+    
+    <script src="script.js"></script>
+</body>
+</html>
