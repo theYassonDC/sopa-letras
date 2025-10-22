@@ -12,7 +12,7 @@ body {
 }
 
 .container {
-    max-width: 800px;
+    max-width: 900px;
     margin: 0 auto;
     padding: 20px;
 }
@@ -113,10 +113,10 @@ button:hover {
 
 #word-search {
     display: grid;
-    grid-template-columns: repeat(15, 1fr);
+    grid-template-columns: repeat(16, 1fr);
     gap: 2px;
     margin: 20px auto;
-    max-width: 600px;
+    max-width: 640px;
 }
 
 .letter {
@@ -147,6 +147,11 @@ button:hover {
     color: white;
 }
 
+.letter.found.selected {
+    background-color: #1abc9c;
+    color: white;
+}
+
 #congratulations {
     background-color: #2ecc71;
     color: white;
@@ -157,7 +162,7 @@ button:hover {
     margin-bottom: 15px;
 }
 
-@media (max-width: 650px) {
+@media (max-width: 700px) {
     .letter {
         width: 25px;
         height: 25px;
@@ -165,7 +170,17 @@ button:hover {
     }
     
     #word-search {
-        grid-template-columns: repeat(15, 1fr);
-        max-width: 400px;
+        grid-template-columns: repeat(16, 1fr);
+        max-width: 450px;
+    }
+    
+    input[type="text"] {
+        width: 100%;
+        margin-right: 0;
+        margin-bottom: 10px;
+    }
+    
+    .container {
+        padding: 10px;
     }
 }

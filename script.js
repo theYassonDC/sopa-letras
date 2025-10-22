@@ -4,6 +4,7 @@ let selectedLetters = [];
 let foundWords = [];
 let wordSearchMatrix = [];
 let wordPositions = [];
+let foundLetters = new Set();
 
 // Lista de palabras a buscar
 const words = [
@@ -33,9 +34,12 @@ restartBtn.addEventListener('click', restartGame);
 
 // Inicializar la sopa de letras
 function initializeWordSearch() {
-    // Crear matriz vacía de 15x15
-    wordSearchMatrix = Array(15).fill().map(() => Array(15).fill(''));
+    // Crear matriz vacía de 16x16 para más espacio
+    wordSearchMatrix = Array(16).fill().map(() => Array(16).fill(''));
     wordPositions = [];
+    foundLetters.clear();
+    foundWords = [];
+    selectedLetters = [];
     
     // Colocar palabras en la matriz
     words.forEach(word => {
@@ -68,21 +72,21 @@ function placeWord(word) {
     let placed = false;
     let attempts = 0;
     
-    while (!placed && attempts < 100) {
+    while (!placed && attempts < 200) {
         attempts++;
         
         // Elegir dirección aleatoria
         const direction = directions[Math.floor(Math.random() * directions.length)];
         
         // Elegir posición inicial aleatoria
-        let startX = Math.floor(Math.random() * 15);
-        let startY = Math.floor(Math.random() * 15);
+        let startX = Math.floor(Math.random() * 16);
+        let startY = Math.floor(Math.random() * 16);
         
         // Verificar si la palabra cabe en esa dirección
         const endX = startX + direction.x * (word.length - 1);
         const endY = startY + direction.y * (word.length - 1);
         
-        if (endX < 0 || endX >= 15 || endY < 0 || endY >= 15) {
+        if (endX < 0 || endX >= 16 || endY < 0 || endY >= 16) {
             continue;
         }
         
@@ -107,15 +111,20 @@ function placeWord(word) {
             const y = startY + i * direction.y;
             
             wordSearchMatrix[y][x] = word[i];
-            positions.push({ x, y });
+            positions.push({ x, y, letter: word[i] });
         }
         
         wordPositions.push({
             word: word,
-            positions: positions
+            positions: positions,
+            direction: direction
         });
         
         placed = true;
+    }
+    
+    if (!placed) {
+        console.warn(`No se pudo colocar la palabra: ${word}`);
     }
 }
 
@@ -123,8 +132,8 @@ function placeWord(word) {
 function fillEmptySpaces() {
     const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
     
-    for (let y = 0; y < 15; y++) {
-        for (let x = 0; x < 15; x++) {
+    for (let y = 0; y < 16; y++) {
+        for (let x = 0; x < 16; x++) {
             if (wordSearchMatrix[y][x] === '') {
                 wordSearchMatrix[y][x] = letters[Math.floor(Math.random() * letters.length)];
             }
@@ -135,14 +144,21 @@ function fillEmptySpaces() {
 // Renderizar la sopa de letras en el DOM
 function renderWordSearch() {
     wordSearch.innerHTML = '';
+    wordSearch.style.gridTemplateColumns = 'repeat(16, 1fr)';
     
-    for (let y = 0; y < 15; y++) {
-        for (let x = 0; x < 15; x++) {
+    for (let y = 0; y < 16; y++) {
+        for (let x = 0; x < 16; x++) {
             const letter = document.createElement('div');
             letter.className = 'letter';
             letter.textContent = wordSearchMatrix[y][x];
             letter.dataset.x = x;
             letter.dataset.y = y;
+            
+            // Marcar como encontrada si ya pertenece a una palabra encontrada
+            const key = `${x},${y}`;
+            if (foundLetters.has(key)) {
+                letter.classList.add('found');
+            }
             
             letter.addEventListener('click', () => selectLetter(x, y));
             
@@ -173,9 +189,6 @@ function renderWordList() {
 function selectLetter(x, y) {
     const letterElement = document.querySelector(`.letter[data-x="${x}"][data-y="${y}"]`);
     
-    // Si la letra ya está encontrada, no hacer nada
-    if (letterElement.classList.contains('found')) return;
-    
     // Si la letra ya está seleccionada, quitarla de la selección
     if (letterElement.classList.contains('selected')) {
         letterElement.classList.remove('selected');
@@ -191,51 +204,121 @@ function selectLetter(x, y) {
     checkWord();
 }
 
-// Verificar si la selección forma una palabra
+// Verificar si la selección forma una palabra - COMPLETAMENTE CORREGIDA
 function checkWord() {
     if (selectedLetters.length < 3) return;
     
-    // Obtener la palabra formada por las letras seleccionadas
+    // Convertir las letras seleccionadas a un string
     const selectedWord = selectedLetters.map(letter => letter.letter).join('');
     
-    // Verificar si coincide con alguna palabra de la lista
-    const matchedWord = words.find(word => 
+    // Verificar si coincide con alguna palabra de la lista (en cualquier dirección)
+    let matchedWord = null;
+    
+    // Verificar la palabra en la dirección seleccionada
+    matchedWord = words.find(word => 
         word === selectedWord || 
         word === selectedWord.split('').reverse().join('')
     );
+    
+    // Si no coincide directamente, verificar si las letras seleccionadas forman una palabra en la matriz
+    if (!matchedWord) {
+        matchedWord = findWordInMatrix(selectedLetters);
+    }
     
     if (matchedWord && !foundWords.includes(matchedWord)) {
         // Marcar la palabra como encontrada
         foundWords.push(matchedWord);
         
-        // Marcar las letras como encontradas
-        selectedLetters.forEach(letter => {
-            const letterElement = document.querySelector(`.letter[data-x="${letter.x}"][data-y="${letter.y}"]`);
-            letterElement.classList.remove('selected');
-            letterElement.classList.add('found');
-        });
+        // Encontrar las posiciones reales de la palabra en la matriz
+        const wordData = wordPositions.find(wp => wp.word === matchedWord);
+        
+        if (wordData) {
+            // Marcar las letras como encontradas permanentemente
+            wordData.positions.forEach(pos => {
+                const key = `${pos.x},${pos.y}`;
+                foundLetters.add(key);
+                
+                const letterElement = document.querySelector(`.letter[data-x="${pos.x}"][data-y="${pos.y}"]`);
+                if (letterElement) {
+                    letterElement.classList.add('found');
+                    letterElement.classList.remove('selected');
+                }
+            });
+        }
         
         // Actualizar la lista de palabras
         renderWordList();
         
         // Limpiar la selección
-        selectedLetters = [];
+        clearSelection();
         
         // Verificar si se completó el juego
         if (foundWords.length === words.length) {
-            showCongratulations();
+            setTimeout(showCongratulations, 500);
         }
-    } else if (selectedLetters.length > 10) {
+    } else if (selectedLetters.length > 15) {
         // Si la selección es demasiado larga y no forma una palabra, limpiar
         clearSelection();
     }
+}
+
+// Nueva función para encontrar palabras en la matriz basándose en las letras seleccionadas
+function findWordInMatrix(selectedLetters) {
+    // Ordenar las letras por posición para determinar la dirección
+    const sortedByX = [...selectedLetters].sort((a, b) => a.x - b.x);
+    const sortedByY = [...selectedLetters].sort((a, b) => a.y - b.y);
+    
+    // Verificar si forman una línea recta
+    const isHorizontal = sortedByY.every((letter, i, arr) => 
+        i === 0 || letter.y === arr[i-1].y);
+    const isVertical = sortedByX.every((letter, i, arr) => 
+        i === 0 || letter.x === arr[i-1].x);
+    const isDiagonal = sortedByX.every((letter, i, arr) => 
+        i === 0 || (letter.x - arr[i-1].x === letter.y - arr[i-1].y));
+    const isDiagonalInverse = sortedByX.every((letter, i, arr) => 
+        i === 0 || (letter.x - arr[i-1].x === -(letter.y - arr[i-1].y)));
+    
+    // Si no forman una línea recta, no es una selección válida
+    if (!isHorizontal && !isVertical && !isDiagonal && !isDiagonalInverse) {
+        return null;
+    }
+    
+    // Obtener la palabra de la matriz según las posiciones seleccionadas
+    let wordFromMatrix = '';
+    const positions = selectedLetters.map(letter => ({x: letter.x, y: letter.y}));
+    
+    // Ordenar las posiciones según la dirección
+    if (isHorizontal) {
+        positions.sort((a, b) => a.x - b.x);
+    } else if (isVertical) {
+        positions.sort((a, b) => a.y - b.y);
+    } else if (isDiagonal) {
+        positions.sort((a, b) => a.x - b.x);
+    } else if (isDiagonalInverse) {
+        positions.sort((a, b) => a.x - b.x);
+    }
+    
+    // Construir la palabra desde la matriz
+    positions.forEach(pos => {
+        wordFromMatrix += wordSearchMatrix[pos.y][pos.x];
+    });
+    
+    // Verificar si esta palabra existe en nuestra lista
+    const matchedWord = words.find(word => 
+        word === wordFromMatrix || 
+        word === wordFromMatrix.split('').reverse().join('')
+    );
+    
+    return matchedWord;
 }
 
 // Limpiar la selección actual
 function clearSelection() {
     selectedLetters.forEach(letter => {
         const letterElement = document.querySelector(`.letter[data-x="${letter.x}"][data-y="${letter.y}"]`);
-        letterElement.classList.remove('selected');
+        if (letterElement && !letterElement.classList.contains('found')) {
+            letterElement.classList.remove('selected');
+        }
     });
     
     selectedLetters = [];
@@ -293,6 +376,7 @@ function startGame() {
 function restartGame() {
     foundWords = [];
     selectedLetters = [];
+    foundLetters.clear();
     
     congratulationsSection.classList.add('hidden');
     userSection.classList.remove('hidden');
