@@ -1,3 +1,4 @@
+import {words } from "./words.js";
 // Variables globales
 let currentUser = '';
 let selectedLetters = [];
@@ -5,15 +6,9 @@ let foundWords = [];
 let wordSearchMatrix = [];
 let wordPositions = [];
 let foundLetters = new Set();
-
-// Lista de palabras a buscar
-const words = [
-    'PERSEVERANCIA', 'ATARAXIA', 'PINKY', 'AMBICION', 
-    'RESILIENCIA', 'AMOR', 'FUTBOL', 'POSITIVO', 
-    'CRISTIAN', 'JAZHIEL', 'EQUILIBRIO', 'ALEGRIA', 
-    'PACIENCIA', 'TOLERANCIA', 'CARACTER', 'CRITERIO'
-];
-
+let time = 0;
+let foundWordAv = false;
+let intervalTime;
 // Elementos del DOM
 const userSection = document.getElementById('user-section');
 const gameSection = document.getElementById('game-section');
@@ -26,11 +21,44 @@ const wordList = document.getElementById('word-list');
 const wordSearch = document.getElementById('word-search');
 const hintBtn = document.getElementById('hint-btn');
 const restartBtn = document.getElementById('restart-btn');
+const timeVisual = document.getElementById("time");
+const finalTimeVisual = document.getElementById("final-time");
 
 // Event Listeners
 startBtn.addEventListener('click', startGame);
 hintBtn.addEventListener('click', showHint);
 restartBtn.addEventListener('click', restartGame);
+
+// Temporizador 
+function convertirSegundos(segundos) {
+    // Validar que sea un número positivo
+    if (isNaN(segundos) || segundos < 0) {
+        return "Por favor, ingresa un número válido de segundos";
+    }
+
+    // Calcular horas, minutos y segundos
+    const horas = Math.floor(segundos / 3600);
+    const minutos = Math.floor((segundos % 3600) / 60);
+    const segundosRestantes = segundos % 60;
+
+    // Formatear el resultado
+    const partes = [];
+    
+    if (horas > 0) {
+        partes.push(`${horas} hora${horas > 1 ? 's' : ''}`);
+    }
+    
+    if (minutos > 0) {
+        partes.push(`${minutos} minuto${minutos > 1 ? 's' : ''}`);
+    }
+    
+    if (segundosRestantes > 0) {
+        partes.push(`${segundosRestantes} segundo${segundosRestantes > 1 ? 's' : ''}`);
+    }
+
+    // Devolver el resultado formateado
+    return partes.length > 0 ? partes.join(', ') : '0 segundos';
+}
 
 // Inicializar la sopa de letras
 function initializeWordSearch() {
@@ -40,10 +68,11 @@ function initializeWordSearch() {
     foundLetters.clear();
     foundWords = [];
     selectedLetters = [];
+    time = 0;
     
     // Colocar palabras en la matriz
     words.forEach(word => {
-        placeWord(word);
+        placeWord(word.word);
     });
     
     // Rellenar espacios vacíos con letras aleatorias
@@ -89,7 +118,6 @@ function placeWord(word) {
         if (endX < 0 || endX >= 16 || endY < 0 || endY >= 16) {
             continue;
         }
-        
         // Verificar que no haya conflictos con otras palabras
         let conflict = false;
         for (let i = 0; i < word.length; i++) {
@@ -170,14 +198,12 @@ function renderWordSearch() {
 // Renderizar la lista de palabras
 function renderWordList() {
     wordList.innerHTML = '';
-    
     words.forEach(word => {
         const wordItem = document.createElement('div');
         wordItem.className = 'word-item';
-        wordItem.textContent = word;
-        wordItem.id = `word-${word}`;
-        
-        if (foundWords.includes(word)) {
+        wordItem.textContent = word.word;
+        wordItem.id = `word-${word.word}`;
+        if (foundWords.includes(word.word)) {
             wordItem.classList.add('word-found');
         }
         
@@ -204,7 +230,7 @@ function selectLetter(x, y) {
     checkWord();
 }
 
-// Verificar si la selección forma una palabra - COMPLETAMENTE CORREGIDA
+// Verificar si la selección forma una palabra
 function checkWord() {
     if (selectedLetters.length < 3) return;
     
@@ -216,22 +242,21 @@ function checkWord() {
     
     // Verificar la palabra en la dirección seleccionada
     matchedWord = words.find(word => 
-        word === selectedWord || 
-        word === selectedWord.split('').reverse().join('')
+        word.word === selectedWord || 
+        word.word === selectedWord.split('').reverse().join('')
     );
-    
+    console.log(matchedWord)
     // Si no coincide directamente, verificar si las letras seleccionadas forman una palabra en la matriz
     if (!matchedWord) {
         matchedWord = findWordInMatrix(selectedLetters);
     }
     
-    if (matchedWord && !foundWords.includes(matchedWord)) {
+    if (matchedWord && !foundWords.includes(matchedWord.word)) {
         // Marcar la palabra como encontrada
-        foundWords.push(matchedWord);
+        foundWords.push(matchedWord.word);
         
         // Encontrar las posiciones reales de la palabra en la matriz
-        const wordData = wordPositions.find(wp => wp.word === matchedWord);
-        
+        const wordData = wordPositions.find(wp => wp.word === matchedWord.word);
         if (wordData) {
             // Marcar las letras como encontradas permanentemente
             wordData.positions.forEach(pos => {
@@ -241,10 +266,16 @@ function checkWord() {
                 const letterElement = document.querySelector(`.letter[data-x="${pos.x}"][data-y="${pos.y}"]`);
                 if (letterElement) {
                     letterElement.classList.add('found');
+                    foundWordAv = true
+                    setTimeout(() => foundWordAv = false, 1000)
                     letterElement.classList.remove('selected');
                 }
             });
+            if (foundWordAv) {
+                alert(`Encontraste la palabra: ${matchedWord.word} de ${matchedWord.student}`)
+            }
         }
+
         
         // Actualizar la lista de palabras
         renderWordList();
@@ -305,8 +336,8 @@ function findWordInMatrix(selectedLetters) {
     
     // Verificar si esta palabra existe en nuestra lista
     const matchedWord = words.find(word => 
-        word === wordFromMatrix || 
-        word === wordFromMatrix.split('').reverse().join('')
+        word.word === wordFromMatrix || 
+        word.word === wordFromMatrix.split('').reverse().join('')
     );
     
     return matchedWord;
@@ -329,13 +360,12 @@ function showHint() {
     if (foundWords.length >= words.length) return;
     
     // Encontrar una palabra no encontrada
-    const remainingWords = words.filter(word => !foundWords.includes(word));
+    const remainingWords = words.filter(word => !foundWords.includes(word.word));
     if (remainingWords.length === 0) return;
     
     const hintWord = remainingWords[Math.floor(Math.random() * remainingWords.length)];
-    
     // Resaltar la palabra en la lista
-    const wordElement = document.getElementById(`word-${hintWord}`);
+    const wordElement = document.getElementById(`word-${hintWord.word}`);
     wordElement.style.backgroundColor = '#f39c12';
     wordElement.style.color = 'white';
     
@@ -352,6 +382,9 @@ function showCongratulations() {
     gameSection.classList.add('hidden');
     congratulationsSection.classList.remove('hidden');
     winnerName.textContent = currentUser;
+    clearInterval(intervalTime)
+    intervalTime = null
+    finalTimeVisual.textContent = convertirSegundos(time)
 }
 
 // Iniciar el juego
@@ -368,8 +401,15 @@ function startGame() {
     
     userSection.classList.add('hidden');
     gameSection.classList.remove('hidden');
+
     
     initializeWordSearch();
+    if (!intervalTime) {
+        intervalTime = setInterval(() => {
+            time += 1;
+            timeVisual.innerText = convertirSegundos(time);
+        }, 1000)
+    }
 }
 
 // Reiniciar el juego
@@ -383,8 +423,3 @@ function restartGame() {
     
     usernameInput.value = '';
 }
-
-// Inicializar la aplicación
-document.addEventListener('DOMContentLoaded', () => {
-    // No es necesario hacer nada adicional al cargar
-});

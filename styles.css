@@ -1,4 +1,7 @@
 * {
+    /*
+        Estas son propiedades generales que se van aplicar en todo el documento html  
+     */
     margin: 0;
     padding: 0;
     box-sizing: border-box;
@@ -119,6 +122,9 @@ button:hover {
     max-width: 640px;
 }
 
+/*
+    Cada letra tiene un estilo donde va ponerle estos estilos preterminados 
+ */
 .letter {
     width: 35px;
     height: 35px;
@@ -130,7 +136,7 @@ button:hover {
     font-weight: bold;
     cursor: pointer;
     user-select: none;
-    transition: background-color 0.2s;
+    transition: background-color 0.2s; 
 }
 
 .letter:hover {
