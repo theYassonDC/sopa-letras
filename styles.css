@@ -31,6 +31,15 @@ h1 {
     margin-bottom: 10px;
 }
 
+footer {
+    margin: 0 auto;
+    text-align: center;
+}
+
+.prp {
+    color: #ff4444;
+}
+
 .section {
     background-color: white;
     border-radius: 10px;
